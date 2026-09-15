@@ -216,12 +216,14 @@ describe('a doubles game plays itself', () => {
     return { rally, asksByOwner, asksByOthers, shots, rallies };
   };
 
+  // A cold full-game simulation exceeded Vitest's 5 s default on CI.
+  // Keep the 900 simulated-second cap and all gameplay assertions unchanged.
   it('plays a doubles game to a finish with nobody at the keyboard', () => {
     const { rally, shots, rallies } = selfPlay(2);
     expect(rally.match.phase).toBe('gameOver');
     expect(rallies).toBeGreaterThan(10);
     expect(shots / rallies).toBeGreaterThan(2);
-  });
+  }, 15_000);
 
   it('never asks to swing with a player who does not own the ball', () => {
     // This started at 58 asks out of 240, all of them serves: the serve branch
@@ -231,7 +233,7 @@ describe('a doubles game plays itself', () => {
     const { asksByOwner, asksByOthers } = selfPlay(2);
     expect(asksByOwner).toBeGreaterThan(50);
     expect(asksByOthers).toBe(0);
-  });
+  }, 15_000);
 
   it('gives every player their own input frame', () => {
     const rally = createRally('near', 'steady', 2, true);
