@@ -485,13 +485,13 @@ describe('doubles', () => {
   it('sends the serve to the partner standing in the box it is aimed at', () => {
     const match = createMatch('near', 2);
     // Near serving at 0: slot 0 in the right court, serving cross-court, so the
-    // far team's left-court player takes it. At an even far score that is slot 1.
+    // far team's right-court player takes it. At an even far score that is slot 0.
     expect(serveBox(match)).toBe('right');
-    expect(receiverSlot(match)).toBe(1);
+    expect(receiverSlot(match)).toBe(0);
 
     match.score.far = 1;
-    // The far team swapped when they scored, so the same box is now slot 0's.
-    expect(receiverSlot(match)).toBe(0);
+    // The far team swapped when they scored, so the same box is now slot 1's.
+    expect(receiverSlot(match)).toBe(1);
   });
 
   it('only ever scores for the serving side, doubles included', () => {

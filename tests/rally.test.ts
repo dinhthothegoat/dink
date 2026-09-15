@@ -4,6 +4,7 @@ import { emptyInput } from '../src/sim/input';
 import { interceptPoint, receivePosition } from '../src/sim/intercept';
 import { RallyEvent, createRally, stepRally } from '../src/sim/rally';
 import { createRng } from '../src/sim/rng';
+import { receiverSlot } from '../src/sim/rules';
 import { v3 } from '../src/sim/vec3';
 import { launch, predictBall } from '../src/sim/world';
 
@@ -328,12 +329,14 @@ describe('teams', () => {
     expect(new Set(all).size).toBe(4);
   });
 
-  it('stands the partners at their own kitchen line, across from their mate', () => {
+  it('keeps the serving partner back and receiving partner at the kitchen', () => {
     const rally = createRally('near', 'steady', 2);
     const serverMate = rally.team.near[1];
     const line = C.KITCHEN_DEPTH + C.PLAYER_RADIUS;
-    expect(Math.abs(serverMate.pos.z)).toBeGreaterThanOrEqual(line);
-    expect(Math.abs(serverMate.pos.z)).toBeLessThan(line + 0.4);
+    expect(Math.abs(serverMate.pos.z)).toBeGreaterThan(C.COURT_HALF_LENGTH);
+    const receivingPartner = rally.team.far[receiverSlot(rally.match) === 0 ? 1 : 0];
+    expect(Math.abs(receivingPartner.pos.z)).toBeGreaterThanOrEqual(line);
+    expect(Math.abs(receivingPartner.pos.z)).toBeLessThan(line + 0.4);
     // Server on the right, partner on the left. Nobody stacks two players in
     // one half at the serve.
     expect(Math.sign(serverMate.pos.x)).toBe(-Math.sign(rally.near.pos.x));

@@ -57,7 +57,7 @@ npm run playtest:browser        # Real keyboard, DOM, and renderer checks
 
 On Linux CI, install Chromium with `npx playwright install --with-deps chromium`. Browser screenshots go to ignored `artifacts/browser/`. Optional `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` overrides the managed browser. GitHub Actions runs both verification jobs.
 
-The current unit suite contains 362 tests. Additional tools measure simulation behaviour; they do not replace human playtests:
+The current unit suite contains 378 tests. Additional tools measure simulation behaviour; they do not replace human playtests:
 
 ```sh
 npm run tally -- steady
@@ -90,6 +90,8 @@ Packages are written to ignored `release/`. Packaging scripts also exist for Lin
 The simulation does not import Three.js. Players and AI act through input frames, and seeded randomness enables deterministic replay checks within a compatible simulation version. Visual effects use real elapsed time independently of the fixed simulation timestep.
 
 ## Known limitations and next steps
+
+The [AI positioning update](docs/ai-positioning.md) adds recovery movement, singles net approaches, corrected doubles formations, and serves from behind the baseline. Replay simulation version is now 3; earlier recordings are rejected because the AI and serve geometry changed.
 
 - Changing difficulty during a game is not captured by the replay and can alter a career challenge.
 - A career challenge started in Watch mode can incorrectly award progress.

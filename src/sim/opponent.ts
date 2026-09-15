@@ -4,7 +4,7 @@ import { Side } from './court';
 import { InputFrame } from './input';
 import { interceptPoint, receivePosition } from './intercept';
 import { Skill, pressureOf, readError } from './execution';
-import { PlayerState, inKitchen } from './player';
+import { PlayerState, emptyReach, inKitchen, reachTo } from './player';
 import { Match } from './rules';
 import { Rng } from './rng';
 import { ShotShape } from './solver';
@@ -51,6 +51,8 @@ export const zoneOf = (z: number): Zone => {
 };
 
 export interface ShotContext {
+  /** Contacts so far: a settled net exchange offers a chance to change pace. */
+  rallyHits?: number;
   /** Where the ball will be struck. */
   contact: Vec3;
   /** Where the other player is standing. */
@@ -255,6 +257,11 @@ export const chooseShot = (ctx: ShotContext): ShotChoice => {
   // Day 22: `high` is now the style's own attack height, so a banger tries to
   // put away balls that are below the net and a wall waits for one that is
   // genuinely sitting up. Same branch, different threshold.
+  const speedUp = (ctx.rallyHits ?? 0) >= 6 && style.aggression >= 0.5 &&
+    ctx.contact.y >= 0.4 && ctx.strain < 0.35;
+  if (!high && speedUp) {
+    return { shape: 'drive', aim: aimed(0.8), step: netStep, reason: 'speed up the exchange' };
+  }
   return high
     ? { shape: 'drive', aim: aimed(0.85), step: netStep, reason: 'put it away' }
     : { shape: 'drop', aim: aimed(0.45), step: netStep, reason: 'dink' };
@@ -443,6 +450,7 @@ const homePosition = (out: Vec3, opp: Opponent, otherX: number): Vec3 => {
 const _stand = v3();
 const _future = v3();
 const _contact = v3();
+const _plannedReach = emptyReach();
 
 /**
  * One tick of thought, as an InputFrame.
@@ -500,6 +508,18 @@ export const driveOpponent = (
   }
   opp.serveIn = SERVE_PAUSE;
 
+  // Recover while the ball is away, and keep recovering during the read delay.
+  // Reacting to our OWN shot froze the player instead of following it forward.
+  if (opp.paired) set(_stand, opp.support.x, 0, opp.support.z);
+  else homePosition(_stand, opp, other.pos.x);
+  out.moveX = Math.max(-1, Math.min(1, (_stand.x - p.x) * 3));
+  out.moveZ = Math.max(-1, Math.min(1, (_stand.z - p.z) * 3));
+  out.swing = false;
+  if (match.lastHitBy === opp.side || world.ball.resting || match.phase !== 'inPlay') {
+    opp.reactionLeft = 0;
+    return;
+  }
+
   const mine = own * world.ball.pos.z > 0.4 && !world.ball.resting;
   const bounced = match.bouncesSinceHit > 0;
   const mustLet = match.hitsThisRally < 3;
@@ -520,8 +540,6 @@ export const driveOpponent = (
   }
   if (opp.reactionLeft > 0) {
     opp.reactionLeft -= C.SIM_DT;
-    out.moveX = 0;
-    out.moveZ = 0;
     out.swing = false;
     return;
   }
@@ -546,7 +564,7 @@ export const driveOpponent = (
     // Standing in there is not a place to wait. It is somewhere you step for one
     // shot and step out of, and `meeting.bounced` is exactly that question
     // already answered.
-    receivePosition(_stand, opp.facing, meeting.pos, 0.45, meeting.bounced);
+    receivePosition(_stand, opp.facing, meeting.pos, 0.45, bounced || meeting.bounced);
     _stand.x += opp.readOff;
   } else if (opp.paired) {
     // Waiting, with a partner. Go to YOUR half, not to the middle.
@@ -598,12 +616,15 @@ export const driveOpponent = (
   // 0.9 m away, which is 78 per cent of reach before the player has moved an
   // inch, and the windup is 120 ms of running. The opponent spent whole
   // rallies playing defensive lobs off comfortable balls.
-  const atContact = Math.hypot(
-    _future.x - (p.x + self.vel.x * C.SWING_WINDUP),
-    _future.z - (p.z + self.vel.z * C.SWING_WINDUP),
-  );
-  const strain = Math.min(1, atContact / C.PLAYER_REACH);
+  // Use the contact model's comfort zone. Distance / maximum reach counted
+  // even a routine 0.6 m contact as stretched and suppressed nearly every
+  // approach and speed-up decision.
+  const plannedPlayer = { ...self, pos: v3(
+    p.x + self.vel.x * C.SWING_WINDUP, 0, p.z + self.vel.z * C.SWING_WINDUP,
+  ) };
+  const strain = reachTo(plannedPlayer, { ...world.ball, pos: _future }, _plannedReach).strain;
   const choice = chooseShot({
+    rallyHits: match.hitsThisRally,
     contact: _contact,
     otherX: other.pos.x,
     strain,

@@ -26,7 +26,7 @@ Acceptance: settings cannot alter active match difficulty or invalidate its repl
 ## 2. Reproducible bug reports
 
 - Retain every game recording in the current match and the last completed or abandoned match.
-- Add a versioned report envelope with build information and existing version-2 game replays. Continue accepting standalone version-2 replays.
+- Add a versioned report envelope with build information and current version-3 game replays. Continue accepting standalone version-3 replays. Older simulation versions remain incompatible.
 - Validate required setup fields, enums, finite axes, swing and shape values, and safe integer run counts before playback.
 - Keep Copy Replay and provide selectable text when clipboard access fails.
 - Add CLI file input to validate and replay submitted reports, printing results and clear rejection reasons.

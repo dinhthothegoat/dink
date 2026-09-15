@@ -172,6 +172,15 @@ export const planTeam = (
     plan.owner = leftCourtPlayer(players).slot;
     plan.reason = 'middle ball';
     if (humanSlot !== null) plan.owner = humanSlot;
+    // The convention is a tie-break, not an instruction to watch a ball die
+    // beside the partner while the preferred player is across the court.
+    const preferred = players[plan.owner];
+    const alternate = players[otherSlot(plan.owner)];
+    if (timeTo(preferred, meeting.pos.x, meeting.pos.z) >
+        timeTo(alternate, meeting.pos.x, meeting.pos.z) + 0.6) {
+      plan.owner = alternate.slot;
+      plan.reason = 'covering middle';
+    }
     return plan;
   }
 
@@ -228,7 +237,7 @@ export const supportPosition = (
   const rightSign = self.side === 'near' ? 1 : -1;
   const mine = self.slot === rightSlot ? rightSign : -rightSign;
   out.x = mine * (C.COURT_HALF_WIDTH / 2);
-  out.z = own * Math.max(NVZ_STANCE, Math.min(BASELINE_STANCE, plan.depth));
+  out.z = own * Math.max(NVZ_STANCE, Math.min(C.COURT_HALF_LENGTH + 0.6, plan.depth));
   return out;
 };
 

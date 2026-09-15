@@ -150,7 +150,10 @@ export const serveBox = (match: Match): ServeBox =>
 export const receiverSlot = (match: Match): Slot => {
   const receiving = opponentOf(match.server);
   const evenSlot = rightCourtSlot(match.score[receiving]);
-  return serveTargetBox(match.server, serveBox(match)).rightHalf ? evenSlot : otherSlot(evenSlot);
+  const target = serveTargetBox(match.server, serveBox(match));
+  // rightHalf is world +x; the far team's own right court is world -x.
+  const ownRight = receiving === 'near' ? target.rightHalf : !target.rightHalf;
+  return ownRight ? evenSlot : otherSlot(evenSlot);
 };
 
 /**
@@ -409,7 +412,7 @@ export const serveSetup = (
   // receiver rather than to the arithmetic.
   const targetZ = -sign * (C.KITCHEN_DEPTH + (C.COURT_HALF_LENGTH - C.KITCHEN_DEPTH) * 0.45);
   return {
-    from: { x: fromX, z: sign * (C.COURT_HALF_LENGTH - 0.35) },
+    from: { x: fromX, z: sign * (C.COURT_HALF_LENGTH + 0.6) },
     target: { x: targetX, z: targetZ },
   };
 };

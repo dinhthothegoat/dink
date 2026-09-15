@@ -50,6 +50,13 @@ describe('shot choice', () => {
     expect(chooseShot({ ...base, contact: at(0, 0.6, 2.6) }).shape).toBe('drop');
   });
 
+  it('speeds up a comfortable net exchange instead of dinking indefinitely', () => {
+    const context = { ...base, contact: at(0, 0.6, 2.6), rallyHits: 8 };
+    expect(chooseShot(context).shape).toBe('drive');
+    expect(chooseShot({ ...context, strain: 0.65 }).shape).toBe('drop');
+    expect(chooseShot({ ...context, contact: at(0, 0.3, 2.6) }).shape).toBe('drop');
+  });
+
   it('gives ground and resets when stretched', () => {
     const choice = chooseShot({ ...base, strain: 0.9, contact: at(0, 0.8, 3.0) });
     expect(choice.shape).toBe('lob');

@@ -43,7 +43,9 @@ import { StyleName } from '../sim/style';
  * DIFFERENT match from a file that claims to be the same one. Refusing to read
  * it is the only honest option — see the version check in `readReplay`.
  */
-export const REPLAY_VERSION = 2;
+// 3: serve formation and AI recovery/approach decisions changed. Old inputs
+// cannot reproduce the old simulation, even though the row format is unchanged.
+export const REPLAY_VERSION = 3;
 
 export interface ReplaySetup {
   version: number;

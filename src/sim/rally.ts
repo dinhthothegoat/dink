@@ -30,7 +30,6 @@ import {
 } from './rules';
 import { HUMAN, Skill, perturb, pressureOf } from './execution';
 import {
-  BASELINE_STANCE,
   Difficulty,
   NVZ_STANCE,
   Opponent,
@@ -268,6 +267,7 @@ const partnerStance = (side: Side, x: number): { x: number; z: number } => ({
 const park = (player: PlayerState, x: number, z: number): void => {
   player.pos.x = x;
   player.pos.z = z;
+  copy(player.prev, player.pos);
   set(player.vel, 0, 0, 0);
 };
 
@@ -293,22 +293,21 @@ const parkBallForServe = (rally: Rally): void => {
   // baseline for ever. Two correct rules, and between them a state neither could
   // leave.
   if (rally.match.teamSize === 2) {
-    rally.plans[serving].depth = BASELINE_STANCE;
+    rally.plans[serving].depth = Math.abs(setup.from.z);
     rally.plans[receiving].depth = NVZ_STANCE;
     rally.plans[serving].shape = 'up and back';
     rally.plans[receiving].shape = 'up and back';
   }
 
-  // The two who are not in the exchange stand at their own kitchen line, on the
-  // other half of the court from their partner. That is not decoration: in
-  // doubles the non-serving pair are already at the line before the ball is
-  // struck, and the whole third-shot problem exists because of it.
+  // Partners occupy opposite halves. The receiving partner starts at the
+  // kitchen; the serving partner waits behind the baseline for the return.
   if (rally.match.teamSize === 2) {
     const half = C.COURT_HALF_WIDTH / 2;
     const serverMate = rally.team[serving][otherSlot(rally.match.serverSlot)];
     const receiverMate = rally.team[receiving][otherSlot(takingIt)];
     const mate = partnerStance(serving, setup.from.x > 0 ? -half : half);
-    park(serverMate, mate.x, mate.z);
+    // Both serving players wait back for the mandatory bounce on the return.
+    park(serverMate, mate.x, setup.from.z);
     const across = partnerStance(receiving, setup.target.x > 0 ? -half : half);
     park(receiverMate, across.x, across.z);
   }
@@ -375,6 +374,7 @@ const returnShot = (
   // the two-bounce rule, or that volleys out of the kitchen, is a fault rather
   // than a shot.
   const wasVolley = rally.match.bouncesSinceHit === 0;
+  const returningServe = rally.match.hitsThisRally === 1;
   const ruled = onHit(rally.match, side, inKitchen(player));
   const faulted = ruled.some((e) => e.type === 'fault');
   for (const e of ruled) rally.events.push(e);
@@ -414,6 +414,18 @@ const returnShot = (
     impactOffset: strainToImpactOffset(reach.strain, POWER_SPOT_OFFSET),
   });
   const result = strike(ball, perturb(intended, rally.skill[side], pressure, rally.rng));
+  // Commit net approaches after actual contact, not an attempted swing.
+  // A return buys time because the serving team must let it bounce.
+  const plan = rally.plans[side];
+  if (returningServe && shape !== 'lob') {
+    plan.depth = NVZ_STANCE;
+  } else if (rally.match.teamSize === 2) {
+    advanceOn(plan, shape);
+  } else if (rally.minds[side][player.slot] && shape !== 'lob' &&
+             Math.abs(player.pos.z) < 5.2 && reach.strain < 0.7) {
+    plan.depth = NVZ_STANCE;
+  }
+  plan.shape = shapeOf(plan.depth);
   rally.events.push({
     type: 'struck',
     by: side,
@@ -524,9 +536,8 @@ export const stepRally = (rally: Rally, input: InputFrame): RallyEvent[] => {
       // and only the player actually hitting the ball is allowed to change it —
       // they are the one who either earned the step forward or got pushed back.
       mind.stance = plan.depth;
-      // Whether the other pair is already at the net, which is what turns a deep
-      // ball into a third-shot drop. Singles never sets it: its creep-forward
-      // model is measured and works with one player covering the court.
+      // A deep ball against a pair at the net can call for a third-shot drop.
+      // Singles follows returns and short attacks rather than this team cue.
       mind.foeAtLine = match.teamSize === 2 && _depthNow[acrossSide] < NVZ_STANCE + 1.2;
       // Every player gets a station, owner included: it is where they wait when
       // the ball is on the other side of the net, and the owner needs one just
@@ -534,17 +545,12 @@ export const stepRally = (rally: Rally, input: InputFrame): RallyEvent[] => {
       mind.paired = match.teamSize === 2;
       if (mind.paired) supportPosition(mind.support, player, plan, match.score[side]);
       driveOpponent(mind, world, match, player, foe, rally.frames[side][player.slot], owns);
-      if (owns) {
+      if (owns && match.teamSize === 1) {
         plan.depth = mind.stance;
         plan.shape = shapeOf(plan.depth);
-        // In doubles the shot itself says where the team is going. A drop is
-        // played in order to come in behind it; creeping forward half a metre at
-        // a time is a singles habit that cannot cover the distance in a rally
-        // this short.
-        if (match.teamSize === 2 && rally.frames[side][player.slot].swing) {
-          advanceOn(plan, rally.frames[side][player.slot].shape);
-        }
       }
+      // Doubles depth changes only after contact in returnShot, so the
+      // partner never commits forward because of a swing that may miss.
     }
   }
 
@@ -560,11 +566,11 @@ export const stepRally = (rally: Rally, input: InputFrame): RallyEvent[] => {
     rally.waitTimer -= C.SIM_DT;
     if (rally.waitTimer <= 0) {
       nextServe(match);
-      parkBallForServe(rally);
       for (const side of SIDES) {
         resetTeamPlan(rally.plans[side]);
         for (const mind of rally.minds[side]) if (mind) resetOpponent(mind);
       }
+      parkBallForServe(rally);
       rally.waitTimer = SERVE_PAUSE;
       rally.call = callScore(match);
     }
