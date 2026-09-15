@@ -1,0 +1,102 @@
+{
+  "name": "dink-pickleball-rivals",
+  "private": true,
+  "version": "1.7.0",
+  "type": "module",
+  "description": "A 3D pickleball game.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "verify": "npm run typecheck && npm run test && npm run build",
+    "tally": "tsx tools/tally.mjs",
+    "playtest": "tsx tools/playtest.mjs",
+    "perf": "tsx tools/perf.mjs",
+    "playtest:browser": "npm run build && node tools/play.mjs",
+    "ship": "node tools/ship.mjs",
+    "watch": "npm run build && node tools/watch.mjs",
+    "doubles": "tsx tools/doubles.mjs",
+    "shots": "npm run build && node tools/shot.mjs",
+    "profile": "tsx tools/profile.mjs",
+    "desktop": "npm run build && electron .",
+    "desktop:pack": "npm run build && electron-builder --linux --dir",
+    "desktop:linux": "npm run build && electron-builder --linux",
+    "desktop:win": "npm run build && electron-builder --win",
+    "desktop:mac": "npm run build && electron-builder --mac",
+    "desktop:verify": "xvfb-run -a node tools/desktop.mjs",
+    "styles": "tsx tools/styles.mjs",
+    "replay": "tsx tools/replay.mjs",
+    "icon": "python3 tools/icon.py --contact",
+    "verify:artifact": "node tools/artifact.mjs"
+  },
+  "devDependencies": {
+    "@types/three": "^0.185.4",
+    "electron": "^44.3.0",
+    "electron-builder": "^26.15.3",
+    "playwright": "^1.56.0",
+    "three": "^0.185.1",
+    "tsx": "^4.20.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.2",
+    "vitest": "^5.0.0"
+  },
+  "license": "MIT",
+  "main": "desktop/main.cjs",
+  "author": {
+    "name": "Tho Dinh"
+  },
+  "build": {
+    "appId": "com.thodinh.dink",
+    "productName": "Dink Pickleball Rivals",
+    "copyright": "Copyright (c) 2026 Tho Dinh",
+    "directories": {
+      "output": "release",
+      "buildResources": "desktop/resources"
+    },
+    "files": [
+      "desktop/main.cjs",
+      "desktop/resolve.cjs",
+      "dist/**/*",
+      "!dist/**/*.map",
+      "package.json"
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "tar.gz"
+      ],
+      "category": "Game",
+      "synopsis": "A 3D pickleball game.",
+      "icon": "desktop/resources/icon.png"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "desktop/resources/icon.ico"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.sports-games",
+      "icon": "desktop/resources/icon.png"
+    },
+    "compression": "normal",
+    "publish": null
+  }
+}

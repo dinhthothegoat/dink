@@ -1,0 +1,49 @@
+name: verify
+
+# Every push and every pull request. The suite is nine seconds and the build is
+# one, so there is no argument for running it less often than that.
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Typecheck, test and build
+        run: npm run verify
+
+      # The measuring tools are not tests and are not gated on. They are run so
+      # that a change which quietly alters the *kind* of game being played shows
+      # up in the log of the run that caused it, which is how every design
+      # finding since Day 5 was actually noticed.
+      - name: What kind of game is this
+        run: npx tsx tools/tally.mjs steady
+      - name: Is it still playable by a person
+        run: npx tsx tools/playtest.mjs 3
+      - name: Does the simulation still fit in a tick
+        run: npx tsx tools/perf.mjs
+
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      # The only test that touches the keyboard, the renderer and the DOM. It
+      # fails on any page error, which is what covers the WebGL and Web Audio
+      # that nothing else can inspect.
+      - name: Play it
+        run: node tools/play.mjs
