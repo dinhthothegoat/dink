@@ -543,7 +543,10 @@ export const stepRally = (rally: Rally, input: InputFrame): RallyEvent[] => {
       // the ball is on the other side of the net, and the owner needs one just
       // as much as the partner does.
       mind.paired = match.teamSize === 2;
-      if (mind.paired) supportPosition(mind.support, player, plan, match.score[side]);
+      if (mind.paired) supportPosition(
+        mind.support, player, plan, match.score[side],
+        match.phase === 'inPlay' ? world.ball.pos.x : 0,
+      );
       driveOpponent(mind, world, match, player, foe, rally.frames[side][player.slot], owns);
       if (owns && match.teamSize === 1) {
         plan.depth = mind.stance;

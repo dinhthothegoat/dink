@@ -218,6 +218,7 @@ export const supportPosition = (
   self: PlayerState,
   plan: TeamPlan,
   teamScore: number,
+  ballX = 0,
 ): { x: number; z: number } => {
   const own = self.side === 'near' ? 1 : -1;
   // Stand in your own half of the court, and stand at the team's depth.
@@ -236,7 +237,11 @@ export const supportPosition = (
   const rightSlot = rightCourtSlot(teamScore);
   const rightSign = self.side === 'near' ? 1 : -1;
   const mine = self.slot === rightSlot ? rightSign : -rightSign;
-  out.x = mine * (C.COURT_HALF_WIDTH / 2);
+  // Both recovery stations shade toward play by the same bounded amount.
+  // This closes the middle behind a wide ball without making the support
+  // mirror a chasing partner or cross into the partner's assigned half.
+  const shade = Math.max(-0.65, Math.min(0.65, ballX * 0.25));
+  out.x = mine * (C.COURT_HALF_WIDTH / 2) + shade;
   out.z = own * Math.max(NVZ_STANCE, Math.min(C.COURT_HALF_LENGTH + 0.6, plan.depth));
   return out;
 };
@@ -252,8 +257,8 @@ export const supportPosition = (
  * and the crossing goes straight past the partner. It created the traversals it
  * was meant to prevent.
  *
- * Deleted rather than tuned. A station that does not move cannot walk into
- * anybody.
+ * Ball-side shading above translates both stations equally instead; it does
+ * not chase the partner's live position or swap their halves.
  */
 
 /**

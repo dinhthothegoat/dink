@@ -174,6 +174,47 @@ describe('where the partner stands', () => {
     expect(Math.abs(out.z)).toBeGreaterThanOrEqual(C.KITCHEN_DEPTH + C.PLAYER_RADIUS);
     expect(Math.sign(out.z)).toBe(-1);
   });
+
+  it.each(['near', 'far'] as const)('shifts both %s partners toward play without crossing halves', (side) => {
+    const own = side === 'near' ? 1 : -1;
+    const pair = pairAt(side, 1.5, own * 2.6, -1.5, own * 2.6);
+    for (const score of [0, 1]) {
+      const left = pair.map(self => supportPosition({ x: 0, z: 0 }, self, planAt(2.6), score, -2.5));
+      const right = pair.map(self => supportPosition({ x: 0, z: 0 }, self, planAt(2.6), score, 2.5));
+      pair.forEach((self, i) => {
+        expect(right[i].x).toBeGreaterThan(left[i].x + 0.5);
+        expect(Math.sign(left[i].x)).toBe(halfSign(side, self.slot, score));
+        expect(Math.sign(right[i].x)).toBe(halfSign(side, self.slot, score));
+        expect(right[i].z).toBeCloseTo(own * 2.6);
+      });
+      expect(Math.abs(right[0].x - right[1].x)).toBeCloseTo(C.COURT_HALF_WIDTH);
+    }
+  });
+
+  it('bounds lateral coverage even when a ball goes far outside the court', () => {
+    const pair = pairAt('near', 1.5, 3, -1.5, 3);
+    for (const x of [-100, 100]) {
+      for (const self of pair) {
+        const target = supportPosition({ x: 0, z: 0 }, self, planAt(3), 0, x);
+        expect(Math.abs(target.x)).toBeLessThan(C.COURT_HALF_WIDTH - C.PLAYER_RADIUS);
+        expect(Math.abs(target.x)).toBeGreaterThan(0.7);
+      }
+    }
+  });
+
+  it('updates live recovery targets when the ball changes lateral position', () => {
+    const targets = [-2, 2].map(x => {
+      const rally = createRally('near', 'steady', 2, true);
+      rally.match.phase = 'inPlay';
+      rally.match.hitsThisRally = 4;
+      rally.match.lastHitBy = 'near';
+      launch(rally.world, v3(x, 1, -3), v3(0, 1, -4), v3());
+      stepRally(rally, emptyInput());
+      return rally.minds.near.map(mind => mind!.support.x);
+    });
+    expect(targets[1][0]).toBeGreaterThan(targets[0][0]);
+    expect(targets[1][1]).toBeGreaterThan(targets[0][1]);
+  });
 });
 
 describe('a doubles game plays itself', () => {
